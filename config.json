@@ -1,0 +1,26 @@
+{
+    "interval": 30,
+    "message": "该休息一下了！",
+    "sound_enabled": true,
+    "auto_start": false,
+    "enabled": false,
+    "message_history": [],
+    "reminder_history": [
+        {
+            "trigger_time": "2026-01-09 18:24:27",
+            "message": "该休息一下了！",
+            "response": "dismissed",
+            "response_time": "2026-01-09 18:24:27"
+        }
+    ],
+    "statistics": {
+        "total_reminders": 1,
+        "today_reminders": 1,
+        "last_reset_date": "2026-01-09",
+        "total_runtime_seconds": 3693.3506729602814,
+        "session_start_time": null,
+        "total_timer_seconds": 1803.4024865627289,
+        "today_timer_seconds": 1803.4024865627289,
+        "timer_start_time": 1767954404.491855
+    }
+}

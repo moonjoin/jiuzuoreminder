@@ -27,7 +27,10 @@ class ConfigManager:
                 "today_reminders": 0,
                 "last_reset_date": str(date.today()),
                 "total_runtime_seconds": 0,
-                "session_start_time": None
+                "session_start_time": None,
+                "total_timer_seconds": 0,  # 新增：累计计时总时间（秒）
+                "today_timer_seconds": 0,   # 新增：今日计时总时间（秒）
+                "timer_start_time": None    # 新增：当前计时开始时间
             }
         }
     
@@ -63,6 +66,7 @@ class ConfigManager:
         today = str(date.today())
         if config["statistics"].get("last_reset_date") != today:
             config["statistics"]["today_reminders"] = 0
+            config["statistics"]["today_timer_seconds"] = 0
             config["statistics"]["last_reset_date"] = today
     
     def save(self, config):
@@ -563,19 +567,29 @@ class MainApp:
     def update_statistics_display(self):
         """更新统计信息显示"""
         stats = self.config["statistics"]
-        runtime_seconds = stats["total_runtime_seconds"]
         
         # 计算运行时长
+        runtime_seconds = stats["total_runtime_seconds"]
         if stats["session_start_time"]:
             runtime_seconds += time.time() - stats["session_start_time"]
         
-        hours = int(runtime_seconds // 3600)
-        minutes = int((runtime_seconds % 3600) // 60)
+        runtime_hours = int(runtime_seconds // 3600)
+        runtime_minutes = int((runtime_seconds % 3600) // 60)
+        
+        # 计算计时总时间
+        timer_seconds = stats["total_timer_seconds"]
+        if stats["timer_start_time"] and self.running:
+            timer_seconds += time.time() - stats["timer_start_time"]
+        
+        timer_hours = int(timer_seconds // 3600)
+        timer_minutes = int((timer_seconds % 3600) // 60)
         
         stats_text = (
             f"今日提醒: {stats['today_reminders']} 次  |  "
-            f"总提醒: {stats['total_reminders']} 次  |  "
-            f"累计运行: {hours}小时{minutes}分钟"
+            f"总提醒: {stats['total_reminders']} 次\n"
+            f"今日计时: {timer_hours}小时{timer_minutes}分钟  |  "
+            f"累计计时: {timer_hours}小时{timer_minutes}分钟\n"
+            f"程序运行: {runtime_hours}小时{runtime_minutes}分钟"
         )
         self.stats_var.set(stats_text)
     
@@ -695,6 +709,9 @@ class MainApp:
             self.next_trigger_time = time.time() + self.config["interval"] * 60
             self.snooze_time = 0
             
+            # 记录计时开始时间（用于统计完整计时段落）
+            self.config["statistics"]["timer_start_time"] = time.time()
+            
             self.timer_thread = threading.Thread(target=self.timer_loop, daemon=True)
             self.timer_thread.start()
             
@@ -767,6 +784,22 @@ class MainApp:
         # 更新统计数据
         self.config["statistics"]["total_reminders"] += 1
         self.config["statistics"]["today_reminders"] += 1
+        
+        # 统计完整的计时段落（只有在确认休息时才统计）
+        if response_type == "dismissed" and self.config["statistics"]["timer_start_time"]:
+            timer_duration = time.time() - self.config["statistics"]["timer_start_time"]
+            
+            # 累加到总统计
+            self.config["statistics"]["total_timer_seconds"] += timer_duration
+            self.config["statistics"]["today_timer_seconds"] += timer_duration
+            
+            # 重置计时开始时间
+            self.config["statistics"]["timer_start_time"] = None
+            
+            # 显示统计信息
+            minutes = int(timer_duration // 60)
+            seconds = int(timer_duration % 60)
+            print(f"本次计时完成：{minutes}分{seconds}秒")
         
         # 保存配置
         self.config_manager.save(self.config)
